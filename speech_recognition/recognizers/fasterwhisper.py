@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from io import BytesIO
 
 from speech_recognition.audio import AudioData
@@ -63,12 +64,16 @@ def perform_recognize_faster_whisper(
     import soundfile as sf
     import faster_whisper
 
-    print(f"model: {model}, download_root: {download_root}, beam_size: {beam_size}, device: {device}, compute_type: {compute_type}, language: {language}, translate: {translate}")
+    start_time = time.time()
+
+    print(f"INIT WHISPER ({start_time})")
+    print(f"STARTING TRANSCRIPTION - model: {model}, download_root: {download_root}, beam_size: {beam_size}, device: {device}, compute_type: {compute_type}, language: {language}, translate: {translate}")
 
     whisper_model = faster_whisper.WhisperModel(model, device=device, compute_type=compute_type, download_root=download_root)
-
+    print(f"LOADED MODEL ({time.time()})")
     # 16 kHz https://github.com/openai/whisper/blob/28769fcfe50755a817ab922a7bc83483159600a9/whisper/audio.py#L98-L99
     wav_bytes = audio_data.get_wav_data(convert_rate=16000)
+    print(f"CONVERTED AUDIO STREAM TO 16Khz ({time.time()})")
     wav_stream = BytesIO(wav_bytes)
     audio_array, sampling_rate = sf.read(wav_stream)
     audio_array = audio_array.astype(np.float32)
@@ -81,10 +86,19 @@ def perform_recognize_faster_whisper(
         **transcribe_options
     )
     found_text = list()
+    found_tokens = list()
     for segment in segments:
+        # segment properties: 'avg_logprob', 'compression_ratio', 'count', 'end', 'id', 'index', 'no_speech_prob', 'seek', 'start', 'temperature', 'text', 'tokens', 'words'
         found_text.append(segment.text)
+        found_tokens.append(segment.tokens)
+        print(f"Transcript not contain speech?: {segment.no_speech_prob}")
+        # TODO: skip output if one or more segments did not contain speech
     text = ' '.join(found_text).strip()
-
+    print("\n")
+    print(f"FINISHED TRANSCRIPTION ({round(time.time()-start_time, 2)}s): {text}")
+    print(f"Tokens: {found_tokens}")
+    print(f"Input audio duration: {info.duration_after_vad}s")
+    print("\n")
     if show_dict:
         result = {
             "text": text,
