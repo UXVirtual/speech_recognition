@@ -34,7 +34,7 @@ class InstallWithExtraSteps(install):
 setup(
     name="SpeechRecognition",
     version=speech_recognition.__version__,
-    packages=["speech_recognition","faster-whisper"],
+    packages=["speech_recognition"],
     include_package_data=True,
     cmdclass={"install": InstallWithExtraSteps},
 
